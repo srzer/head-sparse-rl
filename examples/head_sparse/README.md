@@ -37,7 +37,7 @@ HEAD_ORDER_FILE=/path/to/head-order.jsonl FREEZE_RATIO=0.5 \
 
 | Option | Default | Meaning |
 |---|---|---|
-| `FREEZE_RATIO` | `0.5` | Fraction of lowest-ranked heads to freeze; `0.7` trains the top 30%. |
+| `FREEZE_RATIO` | `0.5` | Fraction of lowest-ranked heads to freeze, so `0.7` trains the top 30%. |
 | `NUM_ROLLOUT` | `600` | Number of training rollouts. |
 | `ROLLOUT_BATCH_SIZE` | `16` | Prompts per rollout. |
 | `SAMPLES_PER_PROMPT` | `4` | Responses per training prompt. |
@@ -46,7 +46,7 @@ HEAD_ORDER_FILE=/path/to/head-order.jsonl FREEZE_RATIO=0.5 \
 | `SAVE_INTERVAL` | `200` | Checkpoint save interval. |
 | `GPUS_PER_NODE` | `4` | Number of GPUs. |
 | `TENSOR_PARALLEL_SIZE` | `2` | Tensor parallel size. |
-| `RM_TYPE` | `math` | Reward function; must match the dataset. |
+| `RM_TYPE` | `math` | Reward function that matches the dataset. |
 
 ## Head orders
 

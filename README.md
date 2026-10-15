@@ -51,6 +51,10 @@ RANK_DATA="$TRAIN_DATA" RANK_BATCH_SIZE=1000 \
 Set `RANK_BATCH_SIZE` to the number of prompts in the ranking file. The head
 order is saved to `$HEAD_ORDER_DIR/head-order.jsonl`.
 
+We fixed an issue with gradient aggregation after reduce-scatter and verified
+that recomputed rankings remain largely the same as the provided rankings,
+although they may differ slightly.
+
 ## Train
 
 Train the top 50%:
@@ -68,8 +72,8 @@ HEAD_ORDER_FILE=/path/to/another-head-order.jsonl FREEZE_RATIO=0.7 \
   bash examples/head_sparse/train_qwen3_4b.sh
 ```
 
-`FREEZE_RATIO` is the fraction of heads to freeze: `0.5` trains the top 50%;
-`0.7` trains the top 30%.
+`FREEZE_RATIO` is the fraction of heads to freeze, so `0.5` trains the top 50%
+and `0.7` trains the top 30%.
 
 ## Evaluate
 
