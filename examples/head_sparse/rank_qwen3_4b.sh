@@ -21,6 +21,7 @@ for output in head-grad-importance.jsonl head-order.jsonl head-mask.json; do
 done
 
 export TRAIN_DATA="${RANK_DATA}"
+export TRAIN_MODE=full-attn
 export SAVE_DIR="${RANK_OUTPUT_DIR}/probe-checkpoint"
 export HEAD_MASK="${SCRIPT_DIR}/masks/qwen3-4b-all-heads-trainable.json"
 export HEAD_GRAD_IMPORTANCE_OUTPUT="${RANK_OUTPUT_DIR}/head-grad-importance.jsonl"
@@ -31,7 +32,7 @@ export GLOBAL_BATCH_SIZE=$((ROLLOUT_BATCH_SIZE * SAMPLES_PER_PROMPT))
 export LEARNING_RATE="${RANK_LEARNING_RATE:-1e-8}"
 export SAVE_INTERVAL="${SAVE_INTERVAL:-999999}"
 export SKIP_EVAL_BEFORE_TRAIN=1
-unset EVAL_DATA
+export EVAL_DATA=""
 
 bash "${SCRIPT_DIR}/train_qwen3_4b.sh"
 

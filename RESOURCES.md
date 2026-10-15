@@ -157,6 +157,9 @@ continual-learning stages.
 
 ## Additional evaluation benchmarks
 
+See [benchmark tests](examples/head_sparse/README.md#benchmark-tests) for data
+preparation and evaluation commands.
+
 | Benchmark | Hugging Face dataset | Notes |
 |---|---|---|
 | MATH-500 | [`HuggingFaceH4/MATH-500`](https://huggingface.co/datasets/HuggingFaceH4/MATH-500) | Official `test` split, 500 problems |

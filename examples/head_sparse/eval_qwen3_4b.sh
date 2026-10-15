@@ -14,6 +14,13 @@ RAY_ADDRESS="${RAY_ADDRESS:-http://127.0.0.1:8265}"
 source "${REPO_ROOT}/scripts/models/qwen3-4B.sh"
 
 LOAD_ARGS=()
+EXTRA_EVAL_ARGS=()
+if [[ -n "${EVAL_DUMP_PATH:-}" ]]; then
+  EXTRA_EVAL_ARGS+=(--save-debug-rollout-data "${EVAL_DUMP_PATH}")
+fi
+if [[ "${GENERATION_ONLY:-0}" == 1 ]]; then
+  EXTRA_EVAL_ARGS+=(--custom-rm-path examples.head_sparse.score_benchmarks.generation_only_reward)
+fi
 if [[ -n "${LOAD_CHECKPOINT:-}" ]]; then
   LOAD_ARGS=(--load "${LOAD_CHECKPOINT}" --finetune)
   if [[ -n "${CKPT_STEP:-}" ]]; then
@@ -56,7 +63,7 @@ ray job submit --address="${RAY_ADDRESS}" \
   --rollout-temperature 1 \
   --global-batch-size "${GLOBAL_BATCH_SIZE:-16}" \
   --eval-interval 1 \
-  --eval-prompt-data evaluation "${EVAL_DATA}" \
+  --eval-prompt-data "${EVAL_NAME:-evaluation}" "${EVAL_DATA}" \
   --n-samples-per-eval-prompt "${SAMPLES_PER_PROMPT:-1}" \
   --eval-max-response-len "${MAX_RESPONSE_LEN:-4096}" \
   --eval-top-k 1 \
@@ -90,4 +97,5 @@ ray job submit --address="${RAY_ADDRESS}" \
   --hidden-dropout 0 \
   --accumulate-allreduce-grads-in-fp32 \
   --attention-softmax-in-fp32 \
-  --attention-backend flash
+  --attention-backend flash \
+  "${EXTRA_EVAL_ARGS[@]}"

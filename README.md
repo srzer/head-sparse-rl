@@ -31,11 +31,11 @@ hf download Qwen/Qwen3-4B --local-dir /root/models/Qwen3-4B
 export MEGATRON_PATH=/root/Megatron-LM
 export HF_CHECKPOINT=/root/models/Qwen3-4B
 export TRAIN_DATA=/path/to/train.jsonl
-export EVAL_DATA=/path/to/heldout.jsonl
 export SAVE_DIR=/root/checkpoints/qwen3-4b-top50
 ```
 
-`TRAIN_DATA` and `EVAL_DATA` are JSONL files with `prompt` and `label` fields.
+`TRAIN_DATA` is a JSONL file with `prompt` and `label` fields. During training,
+evaluation uses the same dataset by default.
 See [datasets](RESOURCES.md#training-datasets) for sources.
 
 ## Rank heads
@@ -82,15 +82,29 @@ HEAD_SELECTION=bottom SAVE_DIR=/root/checkpoints/qwen3-4b-bottom50 \
 
 For round-robin allocation across tasks, see [Round-robin](examples/head_sparse/README.md#round-robin).
 
+Use the same training script for the full-attention and full-parameter baselines,
+without generating a ranking:
+
+```bash
+TRAIN_MODE=full-attn SAVE_DIR=/root/checkpoints/qwen3-4b-full-attn \
+  bash examples/head_sparse/train_qwen3_4b.sh
+
+TRAIN_MODE=full SAVE_DIR=/root/checkpoints/qwen3-4b-full \
+  bash examples/head_sparse/train_qwen3_4b.sh
+```
+
 ## Evaluate
 
 ```bash
-LOAD_CHECKPOINT="$SAVE_DIR" CKPT_STEP=599 \
+EVAL_DATA=/path/to/heldout.jsonl LOAD_CHECKPOINT="$SAVE_DIR" CKPT_STEP=599 \
   bash examples/head_sparse/eval_qwen3_4b.sh
 ```
 
 Set `CKPT_STEP` to the saved iteration (599 for the default run).
 Omit `LOAD_CHECKPOINT` to evaluate the base model.
+
+For MATH-500, IFBench, MBPP+, and APPS-intro, use the
+[benchmark test interface](examples/head_sparse/README.md#benchmark-tests).
 
 [Script options](examples/head_sparse/README.md).
 

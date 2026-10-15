@@ -10,38 +10,57 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
-case "${HEAD_SELECTION:-top}" in
-  top) FREEZE_SIDE=suffix ;;
-  bottom) FREEZE_SIDE=prefix ;;
-  *) echo "HEAD_SELECTION must be top or bottom" >&2; exit 1 ;;
+TRAIN_MODE="${TRAIN_MODE:-sparse}"
+HEAD_FREEZE_ARGS=()
+case "${TRAIN_MODE}" in
+  full) ;;
+  full-attn)
+    HEAD_MASK="${SCRIPT_DIR}/masks/qwen3-4b-all-heads-trainable.json"
+    ;;
+  sparse)
+    case "${HEAD_SELECTION:-top}" in
+      top) FREEZE_SIDE=suffix ;;
+      bottom) FREEZE_SIDE=prefix ;;
+      *) echo "HEAD_SELECTION must be top or bottom" >&2; exit 1 ;;
+    esac
+    if [[ -z "${HEAD_ORDER_FILE:-}" && -n "${HEAD_ORDER_DIR:-}" && -z "${HEAD_MASK:-}" ]]; then
+      HEAD_ORDER_FILE="${HEAD_ORDER_DIR}/head-order.jsonl"
+    fi
+    if [[ -n "${HEAD_ORDER_FILE:-}" && -z "${HEAD_MASK:-}" ]]; then
+      [[ -f "${HEAD_ORDER_FILE}" ]] || { echo "Missing head order: ${HEAD_ORDER_FILE}" >&2; exit 1; }
+      HEAD_MASK="${SAVE_DIR}/head-mask.json"
+      python "${REPO_ROOT}/miles/utils/build_head_freeze_manifest.py" \
+        --order "${HEAD_ORDER_FILE}" \
+        --output "${HEAD_MASK}" \
+        --freeze-ratio "${FREEZE_RATIO:-0.5}" \
+        --freeze-side "${FREEZE_SIDE}" \
+        --head-dim 128 \
+        --num-layers 36 \
+        --num-attention-heads 32 \
+        --num-query-groups 8
+    fi
+    if [[ "${HEAD_SELECTION:-top}" == bottom && -z "${HEAD_ORDER_FILE:-}" && -z "${HEAD_MASK:-}" ]]; then
+      echo "Set HEAD_ORDER_FILE to select bottom-ranked heads" >&2
+      exit 1
+    fi
+    HEAD_MASK="${HEAD_MASK:-${SCRIPT_DIR}/masks/qwen3-4b-dapo-math-top50.json}"
+    ;;
+  *) echo "TRAIN_MODE must be sparse, full-attn, or full" >&2; exit 1 ;;
 esac
-if [[ -z "${HEAD_ORDER_FILE:-}" && -n "${HEAD_ORDER_DIR:-}" && -z "${HEAD_MASK:-}" ]]; then
-  HEAD_ORDER_FILE="${HEAD_ORDER_DIR}/head-order.jsonl"
+if [[ "${TRAIN_MODE}" != full ]]; then
+  [[ -f "${HEAD_MASK}" ]] || { echo "Missing head mask: ${HEAD_MASK}" >&2; exit 1; }
+  HEAD_FREEZE_ARGS=(
+    --full-weight-head-freeze-mask-path "${HEAD_MASK}"
+    --full-weight-head-freeze-include-o-proj
+    --zero-frozen-grads-before-clip
+  )
 fi
-if [[ -n "${HEAD_ORDER_FILE:-}" && -z "${HEAD_MASK:-}" ]]; then
-  [[ -f "${HEAD_ORDER_FILE}" ]] || { echo "Missing head order: ${HEAD_ORDER_FILE}" >&2; exit 1; }
-  HEAD_MASK="${SAVE_DIR}/head-mask.json"
-  python "${REPO_ROOT}/miles/utils/build_head_freeze_manifest.py" \
-    --order "${HEAD_ORDER_FILE}" \
-    --output "${HEAD_MASK}" \
-    --freeze-ratio "${FREEZE_RATIO:-0.5}" \
-    --freeze-side "${FREEZE_SIDE}" \
-    --head-dim 128 \
-    --num-layers 36 \
-    --num-attention-heads 32 \
-    --num-query-groups 8
-fi
-if [[ "${HEAD_SELECTION:-top}" == bottom && -z "${HEAD_ORDER_FILE:-}" && -z "${HEAD_MASK:-}" ]]; then
-  echo "Set HEAD_ORDER_FILE to select bottom-ranked heads" >&2
-  exit 1
-fi
-HEAD_MASK="${HEAD_MASK:-${SCRIPT_DIR}/masks/qwen3-4b-dapo-math-top50.json}"
 GPUS_PER_NODE="${GPUS_PER_NODE:-4}"
 RAY_ADDRESS="${RAY_ADDRESS:-http://127.0.0.1:8265}"
 
-[[ -f "${HEAD_MASK}" ]] || { echo "Missing head mask: ${HEAD_MASK}" >&2; exit 1; }
 source "${REPO_ROOT}/scripts/models/qwen3-4B.sh"
 
+EVAL_DATA="${EVAL_DATA-${TRAIN_DATA}}"
 EVAL_ARGS=()
 if [[ -n "${EVAL_DATA:-}" ]]; then
   EVAL_ARGS=(
@@ -85,9 +104,7 @@ ray job submit --address="${RAY_ADDRESS}" \
   --save "${SAVE_DIR}" \
   --save-interval "${SAVE_INTERVAL:-200}" \
   --no-save-optim \
-  --full-weight-head-freeze-mask-path "${HEAD_MASK}" \
-  --full-weight-head-freeze-include-o-proj \
-  --zero-frozen-grads-before-clip \
+  "${HEAD_FREEZE_ARGS[@]}" \
   "${IMPORTANCE_ARGS[@]}" \
   --prompt-data "${TRAIN_DATA}" \
   --input-key "${INPUT_KEY:-prompt}" \
