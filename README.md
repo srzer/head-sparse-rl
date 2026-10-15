@@ -6,6 +6,7 @@ Rank attention heads by gradient importance, then train the top-ranked heads.
 
 - [Training and evaluation curves](https://wandb.ai/ruizshi-uw/head-sparse-rl?nw=0c3q4nyqt95)
 - [Models, checkpoints, and datasets](RESOURCES.md)
+- [Head orders](examples/head_sparse/README.md#head-orders)
 
 ## Setup
 

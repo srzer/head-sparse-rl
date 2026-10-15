@@ -645,20 +645,9 @@ class MegatronTrainRayActor(TrainRayActor):
 
                 def _head_grad_snapshot_step(*step_args, **step_kwargs):
                     if head_grad_importance_output:
-                        snap: dict[str, torch.Tensor] = {}
-                        with torch.no_grad():
-                            for _chunk in self.model:
-                                for _name, _param in _chunk.named_parameters():
-                                    if ".linear_qkv." not in _name or not _name.endswith(".weight"):
-                                        continue
-                                    if any(_m in _name for _m in (".lora_", ".adapter.")):
-                                        continue
-                                    _g = getattr(_param, "main_grad", None)
-                                    if _g is None:
-                                        _g = _param.grad
-                                    if _g is not None:
-                                        snap[_name] = _g.detach().to(torch.float32).clone()
-                        self._head_grad_snapshot = snap
+                        from miles.utils.head_grad_importance import snapshot_qkv_head_gradients
+
+                        self._head_grad_snapshot = snapshot_qkv_head_gradients(self.model, self.optimizer)
                     if mlp_neuron_grad_importance_output:
                         # Reduce to per-neuron norms in place: a full fc1/fc2 gradient
                         # snapshot would be several GiB per rank.
@@ -717,6 +706,7 @@ class MegatronTrainRayActor(TrainRayActor):
                             record["importance_rank"] = int(rank_idx)
                             record["rollout_id"] = int(rollout_id)
                             record["rollout_step"] = step_val
+                            record["score_method"] = "optimizer_owned_global_gradient_v2"
                             f.write(json.dumps(record, sort_keys=True) + "\n")
                     logger.info(
                         f"head_grad_importance {rollout_id}: wrote {len(grad_events)} groups "

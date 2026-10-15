@@ -48,6 +48,21 @@ HEAD_ORDER_FILE=/path/to/head-order.jsonl FREEZE_RATIO=0.5 \
 | `TENSOR_PARALLEL_SIZE` | `2` | Tensor parallel size. |
 | `RM_TYPE` | `math` | Reward function; must match the dataset. |
 
+## Head orders
+
+| Model | Math | MBPP | IFEval |
+|---|---|---|---|
+| Qwen3-1.7B | [Order](orders/qwen3-1.7b-math.jsonl) | [Order](orders/qwen3-1.7b-mbpp.jsonl) | [Order](orders/qwen3-1.7b-ifeval.jsonl) |
+| Qwen3-4B | [Order](orders/qwen3-4b-math.jsonl) | [Order](orders/qwen3-4b-mbpp.jsonl) | [Order](orders/qwen3-4b-ifeval.jsonl) |
+| Mistral-7B | — | — | [Order](orders/mistral-7b-ifeval.jsonl) |
+
+For example, to train with the Qwen3-4B Math order:
+
+```bash
+HEAD_ORDER_FILE=examples/head_sparse/orders/qwen3-4b-math.jsonl \
+  bash examples/head_sparse/train_qwen3_4b.sh
+```
+
 ## Evaluation
 
 Use `EVAL_DATA` for held-out data, `LOAD_CHECKPOINT` for the checkpoint
