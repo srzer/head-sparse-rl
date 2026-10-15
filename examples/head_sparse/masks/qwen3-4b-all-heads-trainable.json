@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "head_dim": 128,
+  "frozen_heads": [],
+  "metadata": {
+    "strategy": "importance_probe",
+    "total_heads": 1728,
+    "frozen_heads": 0,
+    "train_heads": 1728,
+    "note": "Keeps every attention head trainable while freezing non-attention parameters for gradient-importance ranking."
+  }
+}
