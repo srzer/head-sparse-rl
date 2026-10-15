@@ -10,6 +10,14 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
+case "${HEAD_SELECTION:-top}" in
+  top) FREEZE_SIDE=suffix ;;
+  bottom) FREEZE_SIDE=prefix ;;
+  *) echo "HEAD_SELECTION must be top or bottom" >&2; exit 1 ;;
+esac
+if [[ -z "${HEAD_ORDER_FILE:-}" && -n "${HEAD_ORDER_DIR:-}" && -z "${HEAD_MASK:-}" ]]; then
+  HEAD_ORDER_FILE="${HEAD_ORDER_DIR}/head-order.jsonl"
+fi
 if [[ -n "${HEAD_ORDER_FILE:-}" && -z "${HEAD_MASK:-}" ]]; then
   [[ -f "${HEAD_ORDER_FILE}" ]] || { echo "Missing head order: ${HEAD_ORDER_FILE}" >&2; exit 1; }
   HEAD_MASK="${SAVE_DIR}/head-mask.json"
@@ -17,13 +25,15 @@ if [[ -n "${HEAD_ORDER_FILE:-}" && -z "${HEAD_MASK:-}" ]]; then
     --order "${HEAD_ORDER_FILE}" \
     --output "${HEAD_MASK}" \
     --freeze-ratio "${FREEZE_RATIO:-0.5}" \
-    --freeze-side suffix \
+    --freeze-side "${FREEZE_SIDE}" \
     --head-dim 128 \
     --num-layers 36 \
     --num-attention-heads 32 \
     --num-query-groups 8
-elif [[ -n "${HEAD_ORDER_DIR:-}" && -z "${HEAD_MASK:-}" ]]; then
-  HEAD_MASK="${HEAD_ORDER_DIR}/head-mask.json"
+fi
+if [[ "${HEAD_SELECTION:-top}" == bottom && -z "${HEAD_ORDER_FILE:-}" && -z "${HEAD_MASK:-}" ]]; then
+  echo "Set HEAD_ORDER_FILE to select bottom-ranked heads" >&2
+  exit 1
 fi
 HEAD_MASK="${HEAD_MASK:-${SCRIPT_DIR}/masks/qwen3-4b-dapo-math-top50.json}"
 GPUS_PER_NODE="${GPUS_PER_NODE:-4}"

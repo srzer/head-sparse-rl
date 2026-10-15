@@ -73,6 +73,15 @@ HEAD_ORDER_FILE=/path/to/another-head-order.jsonl FREEZE_RATIO=0.7 \
 `FREEZE_RATIO` is the fraction of heads to freeze, so `0.5` trains the top 50%
 and `0.7` trains the top 30%.
 
+To train the bottom 50% from the same ranking:
+
+```bash
+HEAD_SELECTION=bottom SAVE_DIR=/root/checkpoints/qwen3-4b-bottom50 \
+  bash examples/head_sparse/train_qwen3_4b.sh
+```
+
+For round-robin allocation across tasks, see [Round-robin](examples/head_sparse/README.md#round-robin).
+
 ## Evaluate
 
 ```bash

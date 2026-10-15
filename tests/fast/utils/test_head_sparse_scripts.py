@@ -43,6 +43,8 @@ if "--head-grad-importance-output" in args:
             "HEAD_MASK",
             "HEAD_ORDER_FILE",
             "HEAD_ORDER_DIR",
+            "HEAD_SELECTION",
+            "FREEZE_RATIO",
             "RANK_OUTPUT_DIR",
             "HEAD_GRAD_IMPORTANCE_OUTPUT",
             "NUM_ROLLOUT",
@@ -66,8 +68,8 @@ if "--head-grad-importance-output" in args:
             TRAIN_DATA="/data/train.jsonl",
             EVAL_DATA="/data/eval.jsonl",
             SAVE_DIR=str(tmp_path / "checkpoint"),
-            **overrides,
         )
+        env.update(overrides)
         subprocess.run(["bash", str(SCRIPTS / script)], cwd=ROOT, env=env, check=True, capture_output=True, text=True)
         args = json.loads(capture.read_text())
         assert str(ROOT / "train.py") in args
@@ -195,3 +197,42 @@ def test_eval_matches_formal_settings_and_has_nonzero_schedule(launch):
         },
     )
     assert "--finetune" in args
+
+
+def test_top_and_bottom_select_complementary_heads(launch, tmp_path):
+    order = str(SCRIPTS / "orders/qwen3-4b-math.jsonl")
+    selections = []
+    for side in ("top", "bottom"):
+        save = tmp_path / side
+        launch("train_qwen3_4b.sh", HEAD_ORDER_FILE=order, HEAD_SELECTION=side, SAVE_DIR=str(save))
+        mask = json.loads((save / "head-mask.json").read_text())
+        selections.append({(h["layer"], h["projection"], h["head"]) for h in mask["frozen_heads"]})
+    assert len(selections[0]) == len(selections[1]) == 864
+    assert selections[0].isdisjoint(selections[1])
+
+
+def test_bottom_selection_uses_ranking_directory(launch, tmp_path):
+    ranking = tmp_path / "ranking"
+    ranking.mkdir()
+    (ranking / "head-order.jsonl").write_bytes((SCRIPTS / "orders/qwen3-4b-math.jsonl").read_bytes())
+    launch("train_qwen3_4b.sh", HEAD_ORDER_DIR=str(ranking), HEAD_SELECTION="bottom")
+    mask = json.loads((tmp_path / "checkpoint/head-mask.json").read_text())
+    assert mask["metadata"]["freeze_side"] == "prefix"
+
+
+def test_round_robin_selections_work_with_training(launch, tmp_path):
+    outputs = [tmp_path / f"{task}.json" for task in ("math", "ifeval")]
+    subprocess.run([
+        sys.executable, str(SCRIPTS / "round_robin.py"),
+        "--task", f"math:{SCRIPTS / 'orders/qwen3-4b-math.jsonl'}:{outputs[0]}",
+        "--task", f"ifeval:{SCRIPTS / 'orders/qwen3-4b-ifeval.jsonl'}:{outputs[1]}",
+        "--active-ratio", "0.5",
+    ], cwd=ROOT, check=True, capture_output=True, text=True)
+    frozen = []
+    for output in outputs:
+        mask = json.loads(output.read_text())
+        frozen.append({(h["layer"], h["projection"], h["head"]) for h in mask["frozen_heads"]})
+        args = launch("train_qwen3_4b.sh", HEAD_MASK=str(output))
+        assert_options(args, {"full-weight-head-freeze-mask-path": output})
+    assert len(frozen[0]) == len(frozen[1]) == 864
+    assert frozen[0].isdisjoint(frozen[1])

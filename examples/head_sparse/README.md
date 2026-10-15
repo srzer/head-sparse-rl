@@ -37,7 +37,8 @@ HEAD_ORDER_FILE=/path/to/head-order.jsonl FREEZE_RATIO=0.5 \
 
 | Option | Default | Meaning |
 |---|---|---|
-| `FREEZE_RATIO` | `0.5` | Fraction of lowest-ranked heads to freeze, so `0.7` trains the top 30%. |
+| `HEAD_SELECTION` | `top` | Train the `top` or `bottom` part of the ranking. |
+| `FREEZE_RATIO` | `0.5` | Fraction of heads to freeze, so `0.7` trains the selected top or bottom 30%. |
 | `NUM_ROLLOUT` | `600` | Number of training rollouts. |
 | `ROLLOUT_BATCH_SIZE` | `16` | Prompts per rollout. |
 | `SAMPLES_PER_PROMPT` | `4` | Responses per training prompt. |
@@ -47,6 +48,41 @@ HEAD_ORDER_FILE=/path/to/head-order.jsonl FREEZE_RATIO=0.5 \
 | `GPUS_PER_NODE` | `4` | Number of GPUs. |
 | `TENSOR_PARALLEL_SIZE` | `2` | Tensor parallel size. |
 | `RM_TYPE` | `math` | Reward function that matches the dataset. |
+
+To train the bottom 50% instead:
+
+```bash
+HEAD_ORDER_FILE=/path/to/head-order.jsonl HEAD_SELECTION=bottom FREEZE_RATIO=0.5 \
+  SAVE_DIR=/root/checkpoints/qwen3-4b-bottom50 \
+  bash examples/head_sparse/train_qwen3_4b.sh
+```
+
+### Round-robin
+
+Generate a ranking for each task, then allocate heads by taking turns. Each task
+receives its highest-ranked heads that have not already been assigned to another task.
+For two tasks with 50% each:
+
+```bash
+python examples/head_sparse/round_robin.py \
+  --task math:/path/to/math-ranking.jsonl:/root/head-selections/math.json \
+  --task ifeval:/path/to/ifeval-ranking.jsonl:/root/head-selections/ifeval.json \
+  --active-ratio 0.5
+```
+
+Tasks take turns in the order listed. Use the corresponding selection when training
+each task, with its own dataset, reward, and output directory:
+
+```bash
+HEAD_MASK=/root/head-selections/math.json TRAIN_DATA=/path/to/math-train.jsonl \
+  EVAL_DATA=/path/to/math-eval.jsonl RM_TYPE=math \
+  SAVE_DIR=/root/checkpoints/qwen3-4b-math-rr50 \
+  bash examples/head_sparse/train_qwen3_4b.sh
+```
+
+`HEAD_MASK` takes precedence over `HEAD_ORDER_FILE`, `HEAD_SELECTION`, and
+`FREEZE_RATIO`. To allocate among three tasks, add another `--task` and use
+`--active-ratio 0.3333333333`. All rankings must refer to the same model.
 
 ## Head orders
 
