@@ -36,9 +36,7 @@ export SAVE_DIR=/root/checkpoints/qwen3-4b-top50
 ```
 
 `TRAIN_DATA` and `EVAL_DATA` are JSONL files with `prompt` and `label` fields.
-The DAPO-Math runs use `dapo-math-eval-1000.jsonl` for training and
-`dapo-math-heldout-1000.jsonl` for evaluation. See [datasets](RESOURCES.md#training-datasets)
-for sources. These scripts default to the math reward.
+See [datasets](RESOURCES.md#training-datasets) for sources.
 
 ## Rank heads
 
@@ -51,7 +49,7 @@ RANK_DATA="$TRAIN_DATA" RANK_BATCH_SIZE=1000 \
 Set `RANK_BATCH_SIZE` to the number of prompts in the ranking file. The head
 order is saved to `$HEAD_ORDER_DIR/head-order.jsonl`.
 
-We fixed an issue with gradient aggregation after reduce-scatter and verified
+[fix] We fixed an issue with gradient aggregation after reduce-scatter and verified
 that recomputed rankings remain largely the same as the provided rankings,
 although they may differ slightly.
 
