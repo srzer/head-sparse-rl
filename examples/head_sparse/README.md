@@ -130,12 +130,19 @@ EVAL_DATA=/path/to/dapo-math-heldout-1000.jsonl RM_TYPE=math \
 
 Set `CKPT_STEP` to the iteration you want to evaluate.
 
+For held-out RLVR-IFeval:
+
+```bash
+EVAL_DATA=/path/to/rlvr_ifeval_heldout_1000.jsonl RM_TYPE=rlvr_ifeval \
+  LOAD_CHECKPOINT="$SAVE_DIR" CKPT_STEP=599 \
+  bash examples/head_sparse/eval_qwen3_4b.sh
+```
+
 ### Benchmark tests
 
 Prepare the datasets once:
 
 ```bash
-pip install -r examples/head_sparse/requirements_eval.txt
 export DATA_DIR=/root/datasets/head-sparse-eval
 python examples/head_sparse/prepare_eval_data.py --output-dir "$DATA_DIR"
 ```
