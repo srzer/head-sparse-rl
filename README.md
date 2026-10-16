@@ -1,8 +1,6 @@
 # Ranking and Partitioning of Attention Heads for Sparse and Continual Reinforcement Learning Fine-tuning
 
-Code for the paper above, based on [Miles](https://github.com/radixark/miles).
-
-Rank attention heads by gradient importance, then train the top-ranked heads.
+This is the official code implementation of [this paper](https://arxiv.org/abs/2610.21336), based on [Miles](https://github.com/radixark/miles). If you have any question, please feel free to raise an issue. We also provide additional experimental results as below for your reference:
 
 - [Training and evaluation curves](https://wandb.ai/ruizshi-uw/head-sparse-rl?nw=0c3q4nyqt95)
 - [Models, checkpoints, and datasets](RESOURCES.md)
